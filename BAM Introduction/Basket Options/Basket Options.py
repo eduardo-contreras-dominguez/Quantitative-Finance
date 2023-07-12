@@ -71,15 +71,12 @@ def simulate_paths(tickers, NTS, T, N=100):
     return realization_dict
 
 
-if __name__ == "__main__":
-    number_paths = 80
-    tickers = ["AFL", "ZION"]
-    simulate = simulate_paths(tickers=tickers, NTS=1000, T=1 / 12, N=number_paths)
-    strikes = [99, 102]
+def Monte_Carlo_Basket_Simulation(tickers=["AFL", "ZION"], strikes=[101, 99], number_simulations=1000, maturity=1 / 12):
+    simulate = simulate_paths(tickers=tickers, NTS=1000, T=maturity, N=number_simulations)
     # We will check for every path if the condition is met.
     counter = 0
-    for path in range(number_paths):
-        print("Veryfing path number", path)
+    for path in range(number_simulations):
+        # print("Verifying path number", path)
         for i in range(len(tickers)):
             ticker = tickers[i]
             strike = strikes[i]
@@ -87,16 +84,18 @@ if __name__ == "__main__":
                 # On every path we will check the returns made by the asset on one month.
                 if (simulate[ticker][-1, path] - simulate[ticker][0, path]) / simulate[ticker][0, path] >= (
                         strike - 100) / 100:
-                    print("DOWN", (simulate[ticker][-1, path] - simulate[ticker][0, path]) / simulate[ticker][0, path])
+                    # print("DOWN", (simulate[ticker][-1, path] - simulate[ticker][0, path]) / simulate[ticker][0, path])
                     break
             else:
                 if (simulate[ticker][-1, path] - simulate[ticker][0, path]) / simulate[ticker][0, path] <= (
                         strike - 100) / 100:
-                    print("UP", (simulate[ticker][-1, path] - simulate[ticker][0, path]) / simulate[ticker][0, path])
+                    # print("UP", (simulate[ticker][-1, path] - simulate[ticker][0, path]) / simulate[ticker][0, path])
                     break
-            if i ==(len(tickers) - 1):
-                print("This path works well! ", path)
+            if i == (len(tickers) - 1):
+                # print("This path works well! ", path)
                 counter += 1
+    return counter / number_simulations
 
 
-
+if __name__ == "__main__":
+    print(Monte_Carlo_Basket_Simulation())
