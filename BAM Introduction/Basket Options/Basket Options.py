@@ -99,3 +99,4 @@ def Monte_Carlo_Basket_Simulation(tickers=["AFL", "ZION"], strikes=[101, 99], nu
 
 if __name__ == "__main__":
     print(Monte_Carlo_Basket_Simulation())
+    print(backtest_basket([101, 99], ["AFL", "ZION"]))
