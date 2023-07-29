@@ -4,7 +4,8 @@ import plotly.graph_objects as go
 import numpy as np
 from tqdm import tqdm
 
-def identifying_drawdowns(ticker="^GSPC", drawdown_threshold=0.15, local_max_period=60, plotting=True):
+
+def identifying_drawdowns(ticker="^GSPC", drawdown_threshold=0.15, local_max_period=60, plotting=True, mocked=True):
     """
     Draw-down as periods in which prices are lower by more than drawdown_threshold with respect to a local max
     (by default rolling period of 60D)
@@ -14,9 +15,12 @@ def identifying_drawdowns(ticker="^GSPC", drawdown_threshold=0.15, local_max_per
     :param plotting:
     :return:
     """
-
-    # We download price data.
-    df = yf.download(ticker)
+    if not mocked:
+        # We download price data.
+        df = yf.download(ticker)
+        df.to_csv("SP500.csv")
+    else:
+        df = pd.read_csv("SP500.csv", index_col = 0)
 
     # Finding local max on a given period, 1M per default (Looking for max in last 30D period)
     df['Rolling_Max'] = df['Close'].rolling(window=local_max_period, min_periods=1).max()
@@ -98,5 +102,5 @@ def identifying_drawdowns(ticker="^GSPC", drawdown_threshold=0.15, local_max_per
 
 
 if __name__ == "__main__":
-    drawdowns, df = identifying_drawdowns(local_max_period=60)
+    drawdowns, df = identifying_drawdowns(local_max_period=60, mocked = False)
     print("Hello")
