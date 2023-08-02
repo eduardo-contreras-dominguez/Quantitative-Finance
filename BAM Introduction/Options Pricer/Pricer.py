@@ -7,14 +7,15 @@ from tqdm import tqdm
 
 
 class Pricer:
-    def __init__(self, S0, drift, vol, strike, maturity):
+    def __init__(self, risk_free_rate, S0, drift, vol, strike, maturity):
         self.S0 = S0
         self.volatility = vol
+        self.risk_free_rate = risk_free_rate
         self.drift = drift
         self.K = strike
         self.T = maturity
 
-    def BarrierOptionPricer(self, option_type="C", barrier=1.2, barrier_type="I", direction="U", N=10000, NTS=1000):
+    def BarrierOptionPricer(self, option_type="C", barrier=1.2, barrier_type="I", direction="U", N=10, NTS=1000):
         """
 
         :param barrier: Moneyness of the barrier (expressed as a percentage of the current asset price)
@@ -24,12 +25,15 @@ class Pricer:
         :param N: Number of simulations
         :param NTS: Number of time-steps
 
+        TODO: This method compute the whole path, we can do the same thing but only saving last realization
+        of stock price.
+
         :return: Fair Value of Barrier option
         """
         # Step 1: Simulate asset paths.
         # Realization array will be a matrix, every column will be an asset path.
         realization_array = np.zeros((NTS, N))
-        payoffs = [0 for i in range(N)]
+        cumulated_payoffs = 0
         barrier_value = barrier * self.S0
         # We will start at S0 for every simulation
         realization_array[0, :] = [self.S0 for simulation in range(N)]
@@ -47,42 +51,35 @@ class Pricer:
                 # simulation)
                 if np.logical_and(barrier_type == "O", np.logical_and(direction == "U",
                                                                       realization_array[
-                                                                          timestep, simulation] >= barrier)):
+                                                                          timestep, simulation] >= barrier_value)):
                     # If it is an up-and-out option, and we trespass the barrier: we can stop the simulation.
                     trespassed = True
                     break
                 elif np.logical_and(barrier_type == "O", np.logical_and(direction == "D",
                                                                         realization_array[
-                                                                            timestep, simulation] <= barrier)):
+                                                                            timestep, simulation] <= barrier_value)):
                     # If it is a down-and-out option, and we trespass the barrier: we can stop the simulation.
                     trespassed = True
                     break
                 if np.logical_and(barrier_type == "I", np.logical_and(direction == "U",
                                                                       realization_array[
-                                                                          timestep, simulation] >= barrier)):
+                                                                          timestep, simulation] >= barrier_value)):
                     # If it is an up-and-in option, and we trespass the barrier: keep track of this.
                     trespassed = True
                 elif np.logical_and(barrier_type == "I", np.logical_and(direction == "D",
-                                                                          realization_array[
-                                                                              timestep, simulation] <= barrier)):
+                                                                        realization_array[
+                                                                            timestep, simulation] <= barrier_value)):
                     # If it is a down-and-in option, and we trespass the barrier: keep track of this.
                     trespassed = True
-
-        return realization_array
-
-        pass
-
-
-def simulate_asset_path(S0, risk_free_rate, volatility, NTS, T, N=10000):
-    """
-    Simulating realizations of log-normal risk-neutral random walk
-
-    :param S0: Initial asset price
-    :param risk_free_rate: risk-free spot rate
-    :param volatility: historical vol
-    :param NTS: number of time steps
-    :param T: Derivatives expiration
-    :param N: Number of realizations
-
-    :return:  2D array (NTS x N) having asset prices for every simulation.
-    """
+                if timestep == NTS - 1:
+                    # If it is an IN type option and the barrier has been trespassed.
+                    if np.logical_and(option_type == "C", trespassed):
+                        cumulated_payoffs += max(0, realization_array[timestep, simulation] - self.K)
+                    elif np.logical_and(option_type == "P", trespassed):
+                        cumulated_payoffs += max(0, self.K - realization_array[timestep, simulation])
+        value =  math.exp(-self.risk_free_rate*self.T)*1/N*cumulated_payoffs
+        return value
+if __name__ == "__main__":
+    p = Pricer(0.05, 100, 0.05, 0.2, 100, 1)
+    v = p.BarrierOptionPricer(option_type="P", barrier=0.8, barrier_type="O", direction="D", NTS=1000)
+    print(v)
