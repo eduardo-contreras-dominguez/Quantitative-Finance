@@ -40,7 +40,13 @@ class Pricer:
         dt = self.T / NTS
         for simulation in tqdm(range(N)):
             random_variable = np.random.normal(0, 1, NTS)
-            trespassed = False
+
+            # If the barrier is an out type de option will be executed until we face the limit.
+            if barrier_type == "O":
+                executed = True
+            # ...but if the option is an in-type the option will not be executed until we face the barrier.
+            else:
+                executed = False
             for timestep in range(1, NTS):
                 realization_array[timestep, simulation] = realization_array[timestep - 1, simulation] \
                                                           * math.exp((self.drift - 1 / 2 * self.volatility ** 2) * dt
@@ -53,32 +59,34 @@ class Pricer:
                                                                       realization_array[
                                                                           timestep, simulation] >= barrier_value)):
                     # If it is an up-and-out option, and we trespass the barrier: we can stop the simulation.
-                    trespassed = True
+                    executed = False
                     break
                 elif np.logical_and(barrier_type == "O", np.logical_and(direction == "D",
                                                                         realization_array[
                                                                             timestep, simulation] <= barrier_value)):
                     # If it is a down-and-out option, and we trespass the barrier: we can stop the simulation.
-                    trespassed = True
+                    executed = False
                     break
                 if np.logical_and(barrier_type == "I", np.logical_and(direction == "U",
                                                                       realization_array[
                                                                           timestep, simulation] >= barrier_value)):
                     # If it is an up-and-in option, and we trespass the barrier: keep track of this.
-                    trespassed = True
+                    executed = True
                 elif np.logical_and(barrier_type == "I", np.logical_and(direction == "D",
                                                                         realization_array[
                                                                             timestep, simulation] <= barrier_value)):
                     # If it is a down-and-in option, and we trespass the barrier: keep track of this.
-                    trespassed = True
+                    executed = True
                 if timestep == NTS - 1:
                     # If it is an IN type option and the barrier has been trespassed.
-                    if np.logical_and(option_type == "C", trespassed):
+                    if np.logical_and(option_type == "C", executed):
                         cumulated_payoffs += max(0, realization_array[timestep, simulation] - self.K)
-                    elif np.logical_and(option_type == "P", trespassed):
+                    elif np.logical_and(option_type == "P", executed):
                         cumulated_payoffs += max(0, self.K - realization_array[timestep, simulation])
-        value =  math.exp(-self.risk_free_rate*self.T)*1/N*cumulated_payoffs
+        value = math.exp(-self.risk_free_rate * self.T) * 1 / N * cumulated_payoffs
         return value
+
+
 if __name__ == "__main__":
     p = Pricer(0.05, 100, 0.05, 0.2, 100, 1)
     v = p.BarrierOptionPricer(option_type="P", barrier=0.8, barrier_type="O", direction="D", NTS=1000)
