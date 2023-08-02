@@ -3,12 +3,15 @@ import yfinance as yf
 import plotly.graph_objects as go
 import numpy as np
 from tqdm import tqdm
+import math
+import requests
 
 
-def identifying_drawdowns(ticker="^GSPC", drawdown_threshold=0.15, local_max_period=60, plotting=True, mocked=True):
+def identifying_drawdowns(ticker="^GSPC", drawdown_threshold=0.15, local_max_period=60, plotting=True, mocked = True):
     """
     Draw-down as periods in which prices are lower by more than drawdown_threshold with respect to a local max
     (by default rolling period of 60D)
+    :param mocked: Boolean. Check if stock sata cna be used locally
     :param ticker:
     :param drawdown_threshold:
     :param local_max_period:
@@ -69,6 +72,10 @@ def identifying_drawdowns(ticker="^GSPC", drawdown_threshold=0.15, local_max_per
     drawdowns["Start_Date"] = real_dates
     drawdowns["Duration"] = real_period
     """
+    vols = []
+    for start, end in list(zip(drawdowns["Start_Date"].to_list(), drawdowns["End_Date"].to_list())):
+        vols.append(math.sqrt(252)*df.loc[start:end, "Close"].pct_change().std())
+    drawdowns["Volatility"] = vols
 
     if plotting:
         fig = go.Figure()
@@ -102,5 +109,4 @@ def identifying_drawdowns(ticker="^GSPC", drawdown_threshold=0.15, local_max_per
 
 
 if __name__ == "__main__":
-    drawdowns, df = identifying_drawdowns(local_max_period=60, mocked = False)
-    print("Hello")
+    drawdowns, df = identifying_drawdowns(local_max_period=60, mocked = True)
