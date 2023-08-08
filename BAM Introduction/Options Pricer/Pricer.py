@@ -2,18 +2,22 @@ import pandas as pd
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-
+from scipy.stats import norm
 from tqdm import tqdm
 
 
 class Pricer:
-    def __init__(self, risk_free_rate, S0, drift, vol, strike, maturity):
+    def __init__(self, risk_free_rate, S0, drift, vol, strike, maturity, dividend_yield=None):
         self.S0 = S0
         self.volatility = vol
         self.risk_free_rate = risk_free_rate
         self.drift = drift
         self.K = strike
         self.T = maturity
+        if not dividend_yield:
+            self.dividend_yield = 0
+        else:
+            self.dividend_yield = dividend_yield
 
     def BarrierOptionPricer(self, option_type="C", barrier=1.2, barrier_type="I", direction="U", N=1000, NTS=1000):
         """
@@ -87,13 +91,45 @@ class Pricer:
         value = math.exp(-self.risk_free_rate * self.T) * 1 / N * cumulated_payoffs
         return value
 
+    def DigitalOptionPricer(self, option_type="C"):
+        """
+        The aim of this code is to price a digital option with the pricer characteristics.
+
+        :param option_type: C or P for call and put.
+
+        :return: Price of the digital option with the pricer characteristics.
+        """
+        d2 = (math.log(self.S0 / self.K) + (
+                    self.risk_free_rate - self.dividend_yield - 0.5 * self.volatility ** 2) * self.T) / (
+                         self.volatility * math.sqrt(self.T))
+        if option_type == "C":
+            price = math.exp(-self.risk_free_rate * self.T) * norm.cdf(d2)
+        elif option_type == "P":
+            price = math.exp(-self.risk_free_rate * self.T) * norm.cdf(-d2)
+        else:
+            raise ValueError("Invalid option type. Use 'C' or 'P' for call and put respectively.")
+
+        return price
+
 
 if __name__ == "__main__":
+    # Printing a barrier price for different spots and same barrier level
     multiple_spots = np.linspace(80, 120, 50)
-    prices = []
+    barrier_prices = []
+    digital_prices = []
     for spot in multiple_spots:
         print("Spot: ", spot)
-        prices.append(
-            Pricer(0.05, spot, 0.05, 0.2, 100, 1).BarrierOptionPricer(option_type="P", barrier=(100/spot)*0.8, barrier_type="O",
+        p = Pricer(0.05, spot, 0.05, 0.2, 100, 1)
+        barrier_prices.append(
+            p.BarrierOptionPricer(option_type="P", barrier=(100 / spot) * 0.8,
+                                                                      barrier_type="O",
                                                                       direction="D", NTS=1000))
-    print(prices)
+        digital_prices.append(p.DigitalOptionPricer(option_type = "P"))
+    plt.plot(multiple_spots, barrier_prices)
+    plt.title("1Y Down-and-Out Put (Barrier = 80, K= 100) prices")
+    plt.show()
+    plt.plot(multiple_spots, digital_prices)
+    plt.title("1Y Digital Put (K = 100) prices")
+    plt.show()
+    print(barrier_prices)
+    print(digital_prices)
