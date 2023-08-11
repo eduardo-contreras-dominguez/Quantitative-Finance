@@ -4,7 +4,7 @@ import math
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 from tqdm import tqdm
-
+from utils import norm_cdf
 
 class Pricer:
     def __init__(self, risk_free_rate, S0, drift, vol, strike, maturity, dividend_yield=None):
@@ -18,6 +18,26 @@ class Pricer:
             self.dividend_yield = 0
         else:
             self.dividend_yield = dividend_yield
+
+    import math
+
+    def black_scholes_option(self, option_type):
+        """
+        Compute european vanilla option value after BS Model
+
+        :param option_type: Type of option. C: Call, P: Put
+        """
+        d1 = (math.log(self.S0 / self.K) + (self.risk_free_rate + 0.5 * self.volatility ** 2) * T) / (self.volatility * math.sqrt(self.T))
+        d2 = d1 - self.volatility * math.sqrt(self.T)
+
+        if option_type == "C":
+            value = self.S0 * norm_cdf(d1) - self.K * math.exp(-self.risk_free_rate * self.T) * norm_cdf(d2)
+        elif option_type == "P":
+            value = self.K * math.exp(-self.risk_free_rate * self.T) * norm_cdf(-d2) - self.S0 * norm_cdf(-d1)
+        else:
+            raise ValueError("Non-Valid Option Type: please use C or P for call and put respectively")
+
+        return value
 
     def BarrierOptionPricer(self, option_type="C", barrier=1.2, barrier_type="I", direction="U", N=1000, NTS=1000):
         """
