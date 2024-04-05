@@ -206,4 +206,5 @@ wsproto==1.2.0
 xbbg==0.7.7
 y-py==0.5.9
 yfinance==0.2.37
+earnings
 ypy-websocket==0.8.2
